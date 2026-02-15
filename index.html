@@ -2,42 +2,50 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>과학고 데이터 시각화 30선 인터랙티브 캔버스</title>
     <style>
         :root { --primary: #3b82f6; --bg: #f1f5f9; --text: #0f172a; }
         body { font-family: 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-width: 1400px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; max-width: 1400px; margin: 0 auto; }
         .card { background: white; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(59, 130, 246, 0.2); border: 1px solid var(--primary); }
         .card img { width: 100%; border-radius: 6px; }
+        
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; backdrop-filter: blur(5px); }
-        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 95%; max-width: 1100px; height: 90vh; background: white; border-radius: 20px; z-index: 101; overflow: hidden; }
-        .m-container { display: flex; flex-direction: row; height: 100%; }
-        .m-left { flex: 1.2; padding: 20px; display: flex; align-items: center; justify-content: center; background: #fff; }
-        .m-left img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .m-right { flex: 1; padding: 30px; background: #fafafa; border-left: 1px solid #e2e8f0; overflow-y: auto; }
-        .info-section { margin-bottom: 20px; }
-        .label { font-weight: 800; color: var(--primary); font-size: 12px; margin-bottom: 5px; display: block; }
-        .code-box { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
-        .tts-btn { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 50px; cursor: pointer; font-weight: bold; margin-bottom: 20px; width: 100%; }
-        @media (max-width: 768px) { .m-container { flex-direction: column; } .m-right { border-left: none; border-top: 1px solid #ddd; } .grid { grid-template-columns: repeat(2, 1fr); } }
+        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 1150px; height: 85vh; background: white; border-radius: 24px; z-index: 101; overflow: hidden; }
+        .m-container { display: flex; height: 100%; }
+        
+        .m-left { flex: 1.2; padding: 30px; display: flex; align-items: center; justify-content: center; background: #fff; }
+        .m-left img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        .m-right { flex: 1; padding: 40px; background: #fafafa; border-left: 1px solid #e2e8f0; overflow-y: auto; }
+        .info-section { margin-bottom: 25px; }
+        .label { font-weight: 800; color: var(--primary); font-size: 13px; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 1px; }
+        .content { font-size: 16px; line-height: 1.7; color: #334155; }
+        .code-box { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 10px; font-family: 'Consolas', monospace; font-size: 13px; white-space: pre-wrap; margin-top: 10px; }
+        
+        .tts-btn { background: #ef4444; color: white; border: none; padding: 12px 28px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 35px; transition: 0.2s; }
+        .tts-btn:hover { background: #dc2626; transform: scale(1.05); }
+        .close-btn { position: absolute; top: 20px; right: 25px; font-size: 35px; cursor: pointer; color: #94a3b8; background: none; border: none; }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">📊 데이터 시각화 30선 도감</h1>
+
+    <h1 style="text-align: center; margin-bottom: 40px;">📊 데이터 시각화 30선 인터랙티브 도감</h1>
     <div class="grid" id="mainGrid"></div>
+
     <div id="overlay" onclick="closeModal()"></div>
     <div id="modal">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
         <div class="m-container">
             <div class="m-left"><img id="m-img" src=""></div>
             <div class="m-right">
-                <button class="tts-btn" onclick="playTTS()">🔊 스토리 읽어주기 (KO/EN)</button>
-                <div class="info-section"><span class="label">종류</span><div id="m-type" style="font-size: 20px; font-weight: bold;"></div></div>
-                <div class="info-section"><span class="label">본질</span><div id="m-essence"></div></div>
-                <div class="info-section"><span class="label">스토리</span><div id="m-story" style="font-style: italic;"></div></div>
-                <div class="info-section"><span class="label">Python 코드</span><div id="m-code" class="code-box"></div></div>
-                <button onclick="closeModal()" style="width:100%; padding:10px; margin-top:10px;">닫기</button>
+                <button class="tts-btn" onclick="playTTS()">🔊 스토리 읽어주기 (TTS)</button>
+                <div class="info-section"><span class="label">종류</span><div id="m-type" class="content" style="font-size: 24px; font-weight: bold;"></div></div>
+                <div class="info-section"><span class="label">데이터의 본질</span><div id="m-essence" class="content"></div></div>
+                <div class="info-section"><span class="label">실생활 분석 예시</span><div id="m-example" class="content"></div></div>
+                <div class="info-section"><span class="label">인문학적 스토리</span><div id="m-story" class="content" style="font-style: italic; color: #475569;"></div></div>
+                <div class="info-section"><span class="label">Python 구현 코드</span><div id="m-code" class="code-box"></div></div>
             </div>
         </div>
     </div>
@@ -76,15 +84,11 @@
         29: ["오차 막대 선 그래프", "통계적 신뢰도와 오차 범위 표시", "백신 효능 실험의 오차 시각화", "불확실성을 인정할 때 생기는 과학적 신뢰입니다.", "sns.lineplot(ci='sd')"]
     };
 
-
-    // 데이터 보충 (예시)
-    for(let i=2; i<30; i++) if(!plotData[i]) plotData[i] = ["Graph " + i, "데이터 분석 용도", "데이터 스토리", "sns.plot()"];
-
     const grid = document.getElementById('mainGrid');
     for(let i=0; i<30; i++) {
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = `<img src="plots/plot_${i}.png" onerror="this.src='https://via.placeholder.com/300x200?text=Plot+${i}'">
+        card.innerHTML = `<img src="plots/plot_${i}.png" onerror="this.src='https://via.placeholder.com/300x200?text=Graph+${i}+Not+Found'">
                           <div style="font-weight:bold; margin-top:8px;">#${i} ${plotData[i][0]}</div>`;
         card.onclick = () => openModal(i);
         grid.appendChild(card);
@@ -95,8 +99,9 @@
         document.getElementById('m-img').src = `plots/plot_${idx}.png`;
         document.getElementById('m-type').innerText = info[0];
         document.getElementById('m-essence').innerText = info[1];
-        document.getElementById('m-story').innerText = info[2];
-        document.getElementById('m-code').innerText = info[3];
+        document.getElementById('m-example').innerText = info[2];
+        document.getElementById('m-story').innerText = `"${info[3]}"`;
+        document.getElementById('m-code').innerText = info[4];
         document.getElementById('overlay').style.display = 'block';
         document.getElementById('modal').style.display = 'block';
     }
@@ -107,29 +112,50 @@
         window.speechSynthesis.cancel();
     }
 
+// 목소리 설정 변수
     let koVoice, enVoice;
-    function setVoices() {
+
+    // 브라우저에 등록된 목소리 로드
+    function loadVoices() {
         const voices = window.speechSynthesis.getVoices();
-        koVoice = voices.find(v => v.lang.includes('ko'));
-        enVoice = voices.find(v => v.lang.includes('en'));
+        koVoice = voices.find(v => v.lang.startsWith('ko'));
+        enVoice = voices.find(v => v.lang.startsWith('en'));
     }
-    window.speechSynthesis.onvoiceschanged = setVoices;
+
+    // 목소리가 로드될 때 실행 (브라우저마다 로딩 시점이 다름)
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
 
     function playTTS() {
         window.speechSynthesis.cancel();
-        if(!koVoice) setVoices();
 
-        const segments = [
-            { text: document.getElementById('m-type').innerText, lang: 'en-US', voice: enVoice },
-            { text: ". 이 그래프의 본질은 " + document.getElementById('m-essence').innerText + "입니다.", lang: 'ko-KR', voice: koVoice },
-            { text: document.getElementById('m-story').innerText, lang: 'ko-KR', voice: koVoice }
+        const type = document.getElementById('m-type').innerText;
+        const essence = document.getElementById('m-essence').innerText;
+        const example = document.getElementById('m-example').innerText;
+        const story = document.getElementById('m-story').innerText;
+
+        // 전체 읽을 텍스트 구성 (언어 구분을 위해 구조화)
+        // 텍스트를 분석하여 한글/영어 파트를 나누어 읽어주는 로직
+        const fullText = [
+            { text: type, lang: 'en' }, // 그래프 명칭(En)
+            { text: `. 데이터의 본질은 ${essence}이며, 예시로는 ${example}가 있습니다.`, lang: 'ko' },
+            { text: "인문학적 스토리입니다.", lang: 'ko' },
+            { text: story, lang: 'ko' }
         ];
 
-        segments.forEach(s => {
-            const u = new SpeechSynthesisUtterance(s.text);
-            u.lang = s.lang;
-            if(s.voice) u.voice = s.voice;
-            window.speechSynthesis.speak(u);
+        fullText.forEach(part => {
+            const utter = new SpeechSynthesisUtterance(part.text);
+            
+            if (part.lang === 'en' && enVoice) {
+                utter.voice = enVoice;
+                utter.lang = 'en-US';
+            } else if (koVoice) {
+                utter.voice = koVoice;
+                utter.lang = 'ko-KR';
+            }
+            
+            utter.rate = 1.0;
+            window.speechSynthesis.speak(utter);
         });
     }
 </script>
