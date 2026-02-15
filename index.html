@@ -112,12 +112,51 @@
         window.speechSynthesis.cancel();
     }
 
+// 목소리 설정 변수
+    let koVoice, enVoice;
+
+    // 브라우저에 등록된 목소리 로드
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        koVoice = voices.find(v => v.lang.startsWith('ko'));
+        enVoice = voices.find(v => v.lang.startsWith('en'));
+    }
+
+    // 목소리가 로드될 때 실행 (브라우저마다 로딩 시점이 다름)
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
     function playTTS() {
         window.speechSynthesis.cancel();
-        const text = `${document.getElementById('m-type').innerText}. 데이터의 본질은 ${document.getElementById('m-essence').innerText}이며, 예시로는 ${document.getElementById('m-example').innerText}가 있습니다. 인문학적 스토리입니다. ${document.getElementById('m-story').innerText}`;
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = 'ko-KR';
-        window.speechSynthesis.speak(utter);
+
+        const type = document.getElementById('m-type').innerText;
+        const essence = document.getElementById('m-essence').innerText;
+        const example = document.getElementById('m-example').innerText;
+        const story = document.getElementById('m-story').innerText;
+
+        // 전체 읽을 텍스트 구성 (언어 구분을 위해 구조화)
+        // 텍스트를 분석하여 한글/영어 파트를 나누어 읽어주는 로직
+        const fullText = [
+            { text: type, lang: 'en' }, // 그래프 명칭(En)
+            { text: `. 데이터의 본질은 ${essence}이며, 예시로는 ${example}가 있습니다.`, lang: 'ko' },
+            { text: "인문학적 스토리입니다.", lang: 'ko' },
+            { text: story, lang: 'ko' }
+        ];
+
+        fullText.forEach(part => {
+            const utter = new SpeechSynthesisUtterance(part.text);
+            
+            if (part.lang === 'en' && enVoice) {
+                utter.voice = enVoice;
+                utter.lang = 'en-US';
+            } else if (koVoice) {
+                utter.voice = koVoice;
+                utter.lang = 'ko-KR';
+            }
+            
+            utter.rate = 1.0;
+            window.speechSynthesis.speak(utter);
+        });
     }
 </script>
 </body>
