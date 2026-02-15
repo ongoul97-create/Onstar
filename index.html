@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>과학고 데이터 시각화 30선 인터랙티브 캔버스</title>
+    <style>
+        :root { --primary: #3b82f6; --bg: #f1f5f9; --text: #0f172a; }
+        body { font-family: 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(59, 130, 246, 0.2); border: 1px solid var(--primary); }
+        .card img { width: 100%; border-radius: 6px; }
+        
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; backdrop-filter: blur(5px); }
+        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 1150px; height: 85vh; background: white; border-radius: 24px; z-index: 101; overflow: hidden; }
+        .m-container { display: flex; height: 100%; }
+        
+        .m-left { flex: 1.2; padding: 30px; display: flex; align-items: center; justify-content: center; background: #fff; }
+        .m-left img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        .m-right { flex: 1; padding: 40px; background: #fafafa; border-left: 1px solid #e2e8f0; overflow-y: auto; }
+        .info-section { margin-bottom: 25px; }
+        .label { font-weight: 800; color: var(--primary); font-size: 13px; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 1px; }
+        .content { font-size: 16px; line-height: 1.7; color: #334155; }
+        .code-box { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 10px; font-family: 'Consolas', monospace; font-size: 13px; white-space: pre-wrap; margin-top: 10px; }
+        
+        .tts-btn { background: #ef4444; color: white; border: none; padding: 12px 28px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 35px; transition: 0.2s; }
+        .tts-btn:hover { background: #dc2626; transform: scale(1.05); }
+        .close-btn { position: absolute; top: 20px; right: 25px; font-size: 35px; cursor: pointer; color: #94a3b8; background: none; border: none; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center; margin-bottom: 40px;">📊 데이터 시각화 30선 인터랙티브 도감</h1>
+    <div class="grid" id="mainGrid"></div>
+
+    <div id="overlay" onclick="closeModal()"></div>
+    <div id="modal">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <div class="m-container">
+            <div class="m-left"><img id="m-img" src=""></div>
+            <div class="m-right">
+                <button class="tts-btn" onclick="playTTS()">🔊 스토리 읽어주기 (TTS)</button>
+                <div class="info-section"><span class="label">종류</span><div id="m-type" class="content" style="font-size: 24px; font-weight: bold;"></div></div>
+                <div class="info-section"><span class="label">데이터의 본질</span><div id="m-essence" class="content"></div></div>
+                <div class="info-section"><span class="label">실생활 분석 예시</span><div id="m-example" class="content"></div></div>
+                <div class="info-section"><span class="label">인문학적 스토리</span><div id="m-story" class="content" style="font-style: italic; color: #475569;"></div></div>
+                <div class="info-section"><span class="label">Python 구현 코드</span><div id="m-code" class="code-box"></div></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const plotData = {
+        0: ["선형 회귀 플롯 (Regplot)", "두 변수 간 직선적 상관관계 파악", "공부 시간과 성적의 상관관계", "뉴턴의 결정론적 세계관처럼, 인과관계를 선으로 증명합니다.", "sns.regplot(x='total_bill', y='tip', data=tips)"],
+        1: ["히스토그램 (Histogram)", "데이터 빈도 및 분포 모양 확인", "우리 학교 학생들의 키 분포", "케틀레의 '평균적 인간' 개념처럼, 무질서 속 질서를 찾습니다.", "sns.histplot(tips['total_bill'], kde=True)"],
+        2: ["박스 플롯 (Box Plot)", "사분위수 및 이상치 탐지", "학급별 시험 점수 편차 비교", "평균이라는 환상에 속지 않고 데이터의 민낯을 직시합니다.", "sns.boxplot(x='day', y='total_bill', data=tips)"],
+        3: ["바이올린 플롯 (Violin Plot)", "분포 모양과 통계량 동시 파악", "시간대별 음원 스트리밍량 변화", "데이터가 그리는 곡선의 선율로 확률의 리듬을 시각화합니다.", "sns.violinplot(x='time', y='tip', data=tips)"],
+        4: ["색상 구분 산점도 (Scatter Plot)", "다변량 간 관계 패턴 탐색", "성별에 따른 식사비용과 팁의 관계", "프리즘을 통과한 빛처럼 세상을 다채롭게 분석합니다.", "sns.scatterplot(x='total_bill', y='tip', hue='sex', data=tips)"],
+        5: ["막대 그래프 (Bar Chart)", "집단 간 대표값 크기 비교", "동아리별 예산 집행 비교", "이집트의 정직한 비교의 미학을 보여줍니다.", "sns.barplot(x='day', y='tip', data=tips)"],
+        6: ["커널 밀도 추정 (KDE Plot)", "부드러운 확률 밀도 분포 추정", "도시 미세먼지 농도 흐름 파악", "끊임없이 흐르는 강물처럼 확률의 연속성을 묘사합니다.", "sns.kdeplot(tips['total_bill'], fill=True)"],
+        7: ["시계열 선 그래프 (Line Plot)", "시간에 따른 추세와 변동 관찰", "지난 1년 주식 시장 변동", "크로노스의 시간 속에서 역사의 방향성을 추적합니다.", "sns.lineplot(x='date', y='value', data=time_data)"],
+        8: ["카운트 플롯 (Count Plot)", "범주형 데이터의 빈도 확인", "선호하는 프로그래밍 언어 비중", "다수결의 원칙이 시각화되는 민주주의의 도구입니다.", "sns.countplot(x='size', data=tips)"],
+        9: ["스트립 플롯 (Strip Plot)", "개별 데이터의 실제 밀집도 확인", "소수 정예 학급의 점수 분포", "평균에 가려진 개별자의 목소리를 점으로 기록합니다.", "sns.stripplot(x='day', y='total_bill', data=tips)"],
+        10: ["스웜 플롯 (Swarm Plot)", "겹침 없는 입체 분포 확인", "실험군과 대조군의 반응 시간 비교", "군중 속에서도 각자의 영역을 지키는 데이터의 초상화입니다.", "sns.swarmplot(x='day', y='total_bill', data=tips)"],
+        11: ["박스엔 플롯 (Boxen Plot)", "대용량 데이터의 정밀 사분위 확인", "수백만 건의 카드 결제 분석", "빅데이터의 심연 속 숨겨진 세부 계층을 탐험합니다.", "sns.boxenplot(x='day', y='total_bill', data=tips)"],
+        12: ["포인트 플롯 (Point Plot)", "중심 경향성 변화 기울기 강조", "분기별 제품 만족도 급변 측정", "변화의 임계점을 찾아 사건의 원인을 추론하는 이정표입니다.", "sns.pointplot(x='day', y='total_bill', data=tips)"],
+        13: ["누적 분포 함수 (ECDF Plot)", "데이터의 백분위 위치 파악", "모의고사 상위 % 위치 확인", "전체 속에서 나의 위치를 찾는 자기 객관화의 지도입니다.", "sns.ecdfplot(data=tips, x='total_bill')"],
+        14: ["러그 플롯 (Rug Plot)", "축 위의 실제 데이터 위치 표시", "버스 도착 시간의 조밀함 확인", "데이터가 그 자리에 실존했음을 증명하는 가느다란 발자취입니다.", "sns.rugplot(data=tips, x='total_bill')"],
+        15: ["파이 차트 (Pie Chart)", "전체에 대한 항목별 점유율", "가계부 지출 비중 분석", "한정된 자원을 나누는 분배의 철학을 담고 있습니다.", "ax.pie(counts, autopct='%1.0f%%')"],
+        16: ["상관계수 히트맵 (Heatmap)", "변수 간 연관성 수치화", "신체 지표와 질병 상관관계", "온도 차이를 통해 변수 사이의 인연을 발견합니다.", "sns.heatmap(tips.corr(), cmap='coolwarm')"],
+        17: ["잔차 분석 (Residual Plot)", "예측 모델의 오차 무작위성 확인", "부동산 가격 예측 신뢰도 검증", "예측하지 못한 나머지를 통해 진실에 다가가는 겸손함입니다.", "sns.residplot(x='total_bill', y='tip', data=tips)"],
+        18: ["헥스빈 플롯 (Hexbin Plot)", "고밀도 데이터의 벌집형 요약", "전국 인구 밀도 분포 분석", "자연의 효율적 구조인 육각형으로 혼돈을 요약합니다.", "ax.hexbin(x, y, gridsize=15)"],
+        19: ["다항 회귀 (2nd Order Reg)", "비선형적 곡선 추세 모델링", "식물의 성장 가속도 분석", "인생은 직선이 아니라는 비선형적 사고를 묘사합니다.", "sns.regplot(x, y, order=2)"],
+        20: ["스택 영역 차트 (Area Chart)", "누적 합계와 비중 변화 관찰", "산업별 매출 기여도 성장 분석", "지층이 쌓여 역사가 되듯 축적된 시간의 무게를 보여줍니다.", "ax.stackplot(x, y1, y2)"],
+        21: ["누적 히스토그램 (Stacked Hist)", "집단별 분포 중첩 구간 분석", "성별 연봉 분포의 겹침 파악", "집단이 공유하는 보편성과 특수성을 한눈에 보여줍니다.", "sns.histplot(hue='sex', element='step')"],
+        22: ["분리형 바이올린 (Split Violin)", "두 집단 간 차이 극대화", "남녀 수면 시간 데칼코마니 비교", "거울을 보듯 대조하며 우리 안의 차이를 직시하게 합니다.", "sns.violinplot(split=True)"],
+        23: ["버블 차트 (Bubble Chart)", "세 번째 변수의 크기 시각화", "국가별 GDP와 인구수 관계", "평면에 부피라는 권력을 부여하여 영향력을 측정합니다.", "ax.scatter(s=tips['size']*50)"],
+        24: ["수평 히스토그램 (Horizontal Hist)", "긴 이름의 범주 가독성 확보", "국가별 노벨상 수상자 비교", "세상의 긴 이름들을 수용하는 유연한 관점입니다.", "sns.histplot(y='day')"],
+        25: ["2차원 밀도 그래프 (2D KDE)", "두 변수 결합 분포의 등고선", "농구 선수의 슛 성공 위치 분석", "데이터가 만든 산맥을 그려 핫스팟을 탐험합니다.", "sns.kdeplot(x, y)"],
+        26: ["누적 막대 그래프 (Stacked Bar)", "전체 속의 내부 구성 비율 분석", "연도별 에너지원 비중 변화", "전체는 같아도 내실은 변한다는 통찰을 줍니다.", "df.plot(kind='bar', stacked=True)"],
+        27: ["로우에스 추세선 (Lowess)", "국소적 흐름의 부드러운 연결", "변동성 심한 시장 흐름 파악", "공식보다 흐름에 몸을 맡기는 중용의 원리입니다.", "sns.regplot(lowess=True)"],
+        28: ["단일 변수 박스 플롯", "데이터 대칭성 및 이상치 확인", "부품 무게의 불량률 검사", "오직 하나에 집중하여 모순을 찾아내는 수행입니다.", "ax.boxplot(tips['tip'])"],
+        29: ["오차 막대 선 그래프", "통계적 신뢰도와 오차 범위 표시", "백신 효능 실험의 오차 시각화", "불확실성을 인정할 때 생기는 과학적 신뢰입니다.", "sns.lineplot(ci='sd')"]
+    };
+
+    const grid = document.getElementById('mainGrid');
+    for(let i=0; i<30; i++) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<img src="plots/plot_${i}.png" onerror="this.src='https://via.placeholder.com/300x200?text=Graph+${i}+Not+Found'">
+                          <div style="font-weight:bold; margin-top:8px;">#${i} ${plotData[i][0]}</div>`;
+        card.onclick = () => openModal(i);
+        grid.appendChild(card);
+    }
+
+    function openModal(idx) {
+        const info = plotData[idx];
+        document.getElementById('m-img').src = `plots/plot_${idx}.png`;
+        document.getElementById('m-type').innerText = info[0];
+        document.getElementById('m-essence').innerText = info[1];
+        document.getElementById('m-example').innerText = info[2];
+        document.getElementById('m-story').innerText = `"${info[3]}"`;
+        document.getElementById('m-code').innerText = info[4];
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('modal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('modal').style.display = 'none';
+        window.speechSynthesis.cancel();
+    }
+
+    function playTTS() {
+        window.speechSynthesis.cancel();
+        const text = `${document.getElementById('m-type').innerText}. 데이터의 본질은 ${document.getElementById('m-essence').innerText}이며, 예시로는 ${document.getElementById('m-example').innerText}가 있습니다. 인문학적 스토리입니다. ${document.getElementById('m-story').innerText}`;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ko-KR';
+        window.speechSynthesis.speak(utter);
+    }
+</script>
+</body>
+</html>
